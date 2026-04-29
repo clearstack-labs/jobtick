@@ -1,39 +1,144 @@
-# Jobtick
+# JobTick
 
-TODO: Delete this and the text below, and describe your gem
+**Rails job monitoring for Whenever, Solid Queue, and Sidekiq.**
+Know when your scheduled jobs stop running — before your users do.
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/jobtick`. To experiment with that code, run `bin/console` for an interactive prompt.
+---
+
+## The problem
+
+Your error monitor catches exceptions. Mission Control shows you failed jobs.
+Neither tells you when a recurring job **simply stops running**.
+
+No exception. No alert. Nothing.
+
+The Solid Queue scheduler process dies at 2am. Your nightly invoice job hasn't run in three days. Your users notice before you do.
+
+JobTick solves this. It watches every scheduled job in your Rails app and alerts you the moment one goes silent — even when no error is raised.
+
+---
+
+## Why JobTick over Healthchecks.io or Cronitor?
+
+Those tools work — but they require you to manually add a heartbeat ping to every job. Touch 15 job files. Name each monitor by hand. Keep names in sync when jobs are renamed or removed.
+
+JobTick reads your existing config files and registers everything automatically.
+
+```
+config/schedule.rb      → Whenever jobs, auto-discovered
+config/recurring.yml    → Solid Queue recurring tasks, auto-discovered
+sidekiq.yml             → Sidekiq periodic jobs, auto-discovered
+```
+
+Add the gem. Add your API key. Deploy. Done.
+
+---
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+Add to your Gemfile:
 
-Install the gem and add to the application's Gemfile by executing:
-
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+gem 'jobtick'
 ```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+Create an initializer:
 
-```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+# config/initializers/jobtick.rb
+JobTick.configure do |config|
+  config.api_key = ENV['JOBTICK_API_KEY']
+end
 ```
 
-## Usage
+That's it. On next deploy, JobTick reads your schedule config, registers a monitor for every job, and starts tracking.
 
-TODO: Write usage instructions here
+No changes to individual job files. No manual monitor creation. No names to keep in sync.
 
-## Development
+---
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+## What gets monitored
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+### Whenever (`config/schedule.rb`)
 
-## Contributing
+```ruby
+# Your existing schedule.rb — no changes needed
+every 1.day, at: '2:00 am' do
+  runner 'InvoiceJob.perform_later'
+end
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/jobtick.
+every :hour do
+  runner 'SyncInventoryJob.perform_later'
+end
+```
+
+JobTick reads this file at deploy time and creates a monitor for each job automatically.
+
+### Solid Queue (`config/recurring.yml`)
+
+```yaml
+# Your existing recurring.yml — no changes needed
+nightly_report:
+  class: NightlyReportJob
+  schedule: every day at 3am
+
+sync_exchange_rates:
+  class: ExchangeRateJob
+  schedule: every hour
+```
+
+Each entry becomes a monitor. If `NightlyReportJob` doesn't run within its expected window, you get an alert.
+
+### Sidekiq periodic jobs
+
+```ruby
+# Your existing Sidekiq config — no changes needed
+Sidekiq.configure_server do |config|
+  config.periodic do |mgr|
+    mgr.register('0 * * * *', HourlyDigestWorker)
+    mgr.register('0 2 * * *', NightlyCleanupWorker)
+  end
+end
+```
+
+---
+
+## What you get
+
+**Silent failure detection** — alerts when a job stops running entirely, not just when it raises an exception. The failure mode your error monitor misses.
+
+**Auto-sync on deploy** — add a job to your schedule, it appears in your dashboard at next deploy. Remove a job, its monitor is automatically retired.
+
+**Run history** — see every execution: start time, duration, exit status. Spot when a job starts getting slower before it becomes a problem.
+
+**Maintenance windows** — deploying at 3am? Snooze any monitor for a set period so you don't get paged for expected downtime.
+
+**Team alerts** — email and Slack notifications. On-call rotation support on higher plans.
+
+---
+
+## Requirements
+
+- Ruby >= 3.2
+- Rails >= 7.0
+- One or more of: Whenever, Solid Queue, Sidekiq
+
+---
+
+## Status
+
+> **JobTick is currently in development.**
+> Sign up for early access at [jobtick.app](https://jobtick.app).
+> Launching June 2026.
+
+If you want to follow along or give early feedback, open an issue or watch the repo.
+
+---
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+MIT. See [LICENSE](LICENSE).
+
+---
+
+*Built by [Clearstack Labs](https://clearstacklabs.com)*
