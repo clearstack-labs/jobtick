@@ -1,0 +1,13 @@
+periodic_cleanup:
+  class: CleanupJob
+  schedule: every day at 9am
+  queue: default
+
+send_digest_email:
+  class: DigestEmailJob
+  schedule: every week
+  queue: mailers
+
+nightly_report:
+  class: NightlyReportJob
+  schedule: "0 2 * * *"

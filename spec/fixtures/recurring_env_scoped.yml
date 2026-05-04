@@ -1,0 +1,9 @@
+production:
+  periodic_cleanup:
+    class: CleanupJob
+    schedule: every day at 9am
+
+staging:
+  staging_job:
+    class: StagingJob
+    schedule: every hour

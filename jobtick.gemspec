@@ -4,7 +4,7 @@ require_relative "lib/jobtick/version"
 
 Gem::Specification.new do |spec|
   spec.name = "jobtick"
-  spec.version = Jobtick::VERSION
+  spec.version = JobTick::VERSION
   spec.authors = ["Clearstack Labs"]
   spec.email = ["hello@clearstacklabs.com"]
 
@@ -25,16 +25,12 @@ Gem::Specification.new do |spec|
   spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
     ls.readlines("\x0", chomp: true).reject do |f|
       (f == gemspec) ||
-        f.start_with?(*%w[bin/ Gemfile .gitignore test/ .github/ .rubocop.yml])
+        f.start_with?(*%w[bin/ Gemfile .gitignore test/ spec/ .github/ .rubocop.yml])
     end
   end
   spec.bindir = "exe"
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  # Uncomment to register a new dependency of your gem
-  # spec.add_dependency "example-gem", "~> 1.0"
-
-  # For more information and examples about making a new gem, check out our
-  # guide at: https://bundler.io/guides/creating_gem.html
+  spec.add_dependency "logger", ">= 1.6"
 end

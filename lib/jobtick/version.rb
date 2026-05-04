@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
-module Jobtick
-  VERSION = "0.0.1"
+module JobTick
+  VERSION = "0.1.0"
 end
