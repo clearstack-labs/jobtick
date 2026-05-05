@@ -13,10 +13,10 @@ module JobTick
         schedule.jobs.flat_map do |period, jobs|
           jobs.map do |job|
             {
-              key:      job_key(job),
+              key: job_key(job),
               schedule: period.to_s,
-              source:   "whenever",
-              task:     job[:task].to_s.strip
+              source: "whenever",
+              task: job[:task].to_s.strip
             }
           end
         end

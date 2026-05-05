@@ -5,29 +5,8 @@ module JobTick
     class Sidekiq
       def self.parse
         return [] unless defined?(::Sidekiq)
-
-        if defined?(::Sidekiq::Cron::Job)
-          return ::Sidekiq::Cron::Job.all.map do |job|
-            {
-              key:      "sidekiq.#{slugify(job.name)}",
-              schedule: job.cron,
-              source:   "sidekiq",
-              task:     job.klass
-            }
-          end
-        end
-
-        if defined?(::Sidekiq::Periodic::LoopSet)
-          periodic = sidekiq_periodic_config
-          return (periodic || []).map do |klass, opts|
-            {
-              key:      "sidekiq.#{slugify(klass.to_s)}",
-              schedule: opts[:cron] || opts[:every].to_s,
-              source:   "sidekiq",
-              task:     klass.to_s
-            }
-          end
-        end
+        return parse_cron_jobs if defined?(::Sidekiq::Cron::Job)
+        return parse_periodic_jobs if defined?(::Sidekiq::Periodic::LoopSet)
 
         []
       rescue StandardError => e
@@ -35,13 +14,28 @@ module JobTick
         []
       end
 
+      def self.parse_cron_jobs
+        ::Sidekiq::Cron::Job.all.map do |job|
+          { key: "sidekiq.#{slugify(job.name)}", schedule: job.cron, source: "sidekiq", task: job.klass }
+        end
+      end
+      private_class_method :parse_cron_jobs
+
+      def self.parse_periodic_jobs
+        periodic = sidekiq_periodic_config
+        (periodic || []).map do |klass, opts|
+          { key: "sidekiq.#{slugify(klass.to_s)}", schedule: opts[:cron] || opts[:every].to_s,
+            source: "sidekiq", task: klass.to_s }
+        end
+      end
+      private_class_method :parse_periodic_jobs
+
       def self.slugify(str)
         str.downcase.gsub(/[^a-z0-9]+/, "_").gsub(/\A_+|_+\z/, "")
       end
       private_class_method :slugify
 
       def self.sidekiq_periodic_config
-        # Sidekiq 7+ uses default_configuration; older uses options
         if ::Sidekiq.respond_to?(:default_configuration)
           ::Sidekiq.default_configuration[:periodic]
         else

@@ -14,10 +14,10 @@ RSpec.describe JobTick::Parsers::Sidekiq do
     context "with sidekiq-cron" do
       # Build stub doubles without verify — Whenever::Cron::Job is a stub class
       let(:fake_job) do
-        double("Sidekiq::Cron::Job", # rubocop:disable RSpec/VerifiedDoubles
-          name:  "Invoice Processor",
-          cron:  "0 * * * *",
-          klass: "InvoiceProcessorJob")
+        double("Sidekiq::Cron::Job",
+               name: "Invoice Processor",
+               cron: "0 * * * *",
+               klass: "InvoiceProcessorJob")
       end
 
       let(:stub_cron_class) do
@@ -64,8 +64,8 @@ RSpec.describe JobTick::Parsers::Sidekiq do
 
       it "returns all jobs when multiple are present" do
         jobs = [
-          double("job1", name: "job one", cron: "0 1 * * *", klass: "JobOne"), # rubocop:disable RSpec/VerifiedDoubles
-          double("job2", name: "job two", cron: "0 2 * * *", klass: "JobTwo")  # rubocop:disable RSpec/VerifiedDoubles
+          double("job1", name: "job one", cron: "0 1 * * *", klass: "JobOne"),
+          double("job2", name: "job two", cron: "0 2 * * *", klass: "JobTwo")
         ]
         allow(Sidekiq::Cron::Job).to receive(:all).and_return(jobs)
         expect(described_class.parse.length).to eq(2)

@@ -7,7 +7,7 @@ RSpec.describe JobTick::Configuration do
 
   # Temporarily set ENV keys and restore after the block
   def with_env(vars, &example)
-    saved = vars.each_key.with_object({}) { |k, h| h[k] = ENV[k] }
+    saved = vars.each_key.with_object({}) { |k, h| h[k] = ENV.fetch(k, nil) }
     vars.each { |k, v| v.nil? ? ENV.delete(k) : ENV[k] = v }
     example.call
   ensure

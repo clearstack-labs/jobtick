@@ -8,7 +8,7 @@ RSpec.describe JobTick::Parsers::Whenever do
   # Build a Whenever::JobList stub whose .new returns a list with specified jobs.
   # Uses a real method definition to sidestep verify_partial_doubles.
   def stub_whenever(jobs_by_period)
-    list_instance = double("Whenever::JobList", jobs: jobs_by_period) # rubocop:disable RSpec/VerifiedDoubles
+    list_instance = double("Whenever::JobList", jobs: jobs_by_period)
     stub_class = Class.new do
       define_singleton_method(:new) { |**_| list_instance }
     end
@@ -37,7 +37,7 @@ RSpec.describe JobTick::Parsers::Whenever do
       it "returns a job descriptor for each discovered job" do
         stub_whenever(
           "1.hour" => [{ task: "InvoiceJob.perform_later" }],
-          "1.day"  => [{ task: "rake reports:daily" }]
+          "1.day" => [{ task: "rake reports:daily" }]
         )
         result = described_class.parse
         expect(result.length).to eq(2)
@@ -64,7 +64,7 @@ RSpec.describe JobTick::Parsers::Whenever do
 
       it "returns an empty array and does not raise when the parser fails" do
         stub_whenever("1.hour" => [{ task: "SomeJob.run" }])
-        list_double = double("Whenever::JobList") # rubocop:disable RSpec/VerifiedDoubles
+        list_double = double("Whenever::JobList")
         allow(list_double).to receive(:jobs).and_raise(StandardError, "parse error")
         stub_class = Class.new { define_singleton_method(:new) { |**_| list_double } }
         stub_const("Whenever::JobList", stub_class)

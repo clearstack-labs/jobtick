@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Whenever schedule fixture — used by spec/jobtick/parsers/whenever_spec.rb
 
 every 1.hour do

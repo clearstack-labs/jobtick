@@ -17,14 +17,14 @@ RSpec.describe JobTick::Client do
   describe "#ping" do
     it "posts a started ping with the correct payload" do
       stub = stub_request(:post, "https://api.jobtick.app/v1/ping/my.job")
-               .with(
-                 body:    { status: "started" }.to_json,
-                 headers: {
-                   "Content-Type"  => "application/json",
-                   "Authorization" => "Bearer test-key"
-                 }
-               )
-               .to_return(status: 200)
+             .with(
+               body: { status: "started" }.to_json,
+               headers: {
+                 "Content-Type" => "application/json",
+                 "Authorization" => "Bearer test-key"
+               }
+             )
+             .to_return(status: 200)
 
       client.ping("my.job", status: :started)
 
@@ -33,8 +33,8 @@ RSpec.describe JobTick::Client do
 
     it "includes duration when provided" do
       stub = stub_request(:post, "https://api.jobtick.app/v1/ping/my.job")
-               .with(body: hash_including("duration" => 1.234))
-               .to_return(status: 200)
+             .with(body: hash_including("duration" => 1.234))
+             .to_return(status: 200)
 
       client.ping("my.job", status: :completed, duration: 1.2341)
 
@@ -43,8 +43,8 @@ RSpec.describe JobTick::Client do
 
     it "includes message when provided" do
       stub = stub_request(:post, "https://api.jobtick.app/v1/ping/my.job")
-               .with(body: hash_including("message" => "something broke"))
-               .to_return(status: 200)
+             .with(body: hash_including("message" => "something broke"))
+             .to_return(status: 200)
 
       client.ping("my.job", status: :failed, message: "something broke")
 
@@ -85,8 +85,8 @@ RSpec.describe JobTick::Client do
 
     it "posts to /monitors/sync" do
       stub = stub_request(:post, "https://api.jobtick.app/v1/monitors/sync")
-               .with(body: { monitors: monitors }.to_json)
-               .to_return(status: 200)
+             .with(body: { monitors: monitors }.to_json)
+             .to_return(status: 200)
 
       client.register(monitors)
 

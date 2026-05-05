@@ -20,10 +20,10 @@ module JobTick
           next unless config.is_a?(Hash)
 
           {
-            key:      "solid_queue.#{key}",
+            key: "solid_queue.#{key}",
             schedule: config["schedule"],
-            source:   "solid_queue",
-            task:     config["class"]
+            source: "solid_queue",
+            task: config["class"]
           }
         end.compact
       rescue StandardError => e
