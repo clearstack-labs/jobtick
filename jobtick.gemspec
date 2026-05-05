@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.description = "Auto-discovers and monitors all scheduled jobs in your Rails app. Zero configuration per job."
   spec.homepage = "https://jobtick.app"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.2.0"
+  spec.required_ruby_version = ">= 3.3.0"
 
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
   spec.metadata["homepage_uri"] = spec.homepage
