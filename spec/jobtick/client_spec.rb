@@ -93,6 +93,26 @@ RSpec.describe JobTick::Client do
       expect(stub).to have_been_requested
     end
 
+    it "includes app_name in the payload when provided" do
+      stub = stub_request(:post, "https://api.jobtick.app/v1/monitors/sync")
+             .with(body: { monitors: monitors, app_name: "MyApp" }.to_json)
+             .to_return(status: 200)
+
+      client.register(monitors, app_name: "MyApp")
+
+      expect(stub).to have_been_requested
+    end
+
+    it "omits app_name from the payload when nil" do
+      stub = stub_request(:post, "https://api.jobtick.app/v1/monitors/sync")
+             .with(body: { monitors: monitors }.to_json)
+             .to_return(status: 200)
+
+      client.register(monitors, app_name: nil)
+
+      expect(stub).to have_been_requested
+    end
+
     it "does nothing when disabled" do
       JobTick.config.enabled = false
       client.register(monitors)

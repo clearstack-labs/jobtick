@@ -24,7 +24,7 @@ module JobTick
       return if JobTick.config.api_key.nil?
 
       payload = { monitors: monitors }
-      payload[:app_name] = app_name if app_name.present?
+      payload[:app_name] = app_name if app_name && !app_name.empty?
       post("/monitors/sync", payload)
     end
 
