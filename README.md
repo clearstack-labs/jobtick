@@ -1,5 +1,7 @@
 # JobTick
 
+[![Ruby](https://github.com/clearstack-labs/jobtick/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/clearstack-labs/jobtick/actions/workflows/main.yml)
+
 **Rails job monitoring for Whenever, Solid Queue, and Sidekiq.**
 Know when your scheduled jobs stop running — before your users do.
 
