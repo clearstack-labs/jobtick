@@ -9,26 +9,20 @@ namespace :jobtick do
   end
 
   namespace :whenever do
-    desc "Print Whenever job_type wrappers to add to config/schedule.rb for heartbeat injection"
+    desc "Print the line to add to config/schedule.rb to enable JobTick heartbeat injection"
     task :setup do
-      endpoint = JobTick.config.endpoint
       puts <<~RUBY
-        # Add to config/schedule.rb to enable JobTick heartbeat injection for Whenever jobs:
+        # Add to config/schedule.rb to enable JobTick heartbeat injection for all Whenever jobs:
 
-        job_type :jobtick_runner, %(curl -sf "#{endpoint}/ping/:monitor_key/started" ; ) \\
-                                  %(bundle exec rails runner ':task' :output && ) \\
-                                  %(curl -sf "#{endpoint}/ping/:monitor_key/completed" || ) \\
-                                  %(curl -sf "#{endpoint}/ping/:monitor_key/failed")
+        JobTick::WheneverSetup.install!(self)
 
-        job_type :jobtick_rake,   %(curl -sf "#{endpoint}/ping/:monitor_key/started" ; ) \\
-                                  %(bundle exec rake :task :output && ) \\
-                                  %(curl -sf "#{endpoint}/ping/:monitor_key/completed" || ) \\
-                                  %(curl -sf "#{endpoint}/ping/:monitor_key/failed")
-
-        # Then use jobtick_runner / jobtick_rake instead of runner / rake, e.g.:
-        # every 1.hour do
-        #   jobtick_runner "InvoiceJob.perform_later", monitor_key: "invoice_job"
-        # end
+        # This overrides the built-in runner, rake, and command job types so that
+        # every scheduled job automatically sends started/completed/failed heartbeats.
+        # No per-job changes are required.
+        #
+        # If jobtick is not already loaded via your Rails environment, add:
+        #   require "jobtick/whenever_setup"
+        # before the install! call.
       RUBY
     end
   end

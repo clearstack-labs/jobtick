@@ -97,25 +97,34 @@ JobTick installs a server middleware that wraps every job execution. For native 
 
 ### Whenever (`config/schedule.rb`)
 
-Whenever schedules jobs as cron shell commands, so there is no Ruby hook point to instrument automatically. One setup step is required: run the generator and update your `config/schedule.rb` to use the `jobtick_runner` and `jobtick_rake` job types instead of the built-in `runner` and `rake`:
-
-```
-bundle exec rake jobtick:whenever:setup
-```
-
-This prints the two `job_type` definitions to add to the top of your schedule file, then use them in place of the standard types:
+Whenever schedules jobs as cron shell commands, so there is no Ruby hook point to instrument automatically. Add one line to `config/schedule.rb`:
 
 ```ruby
+JobTick::WheneverSetup.install!(self)
+```
+
+This overrides the built-in `runner`, `rake`, and `command` job types to wrap every execution with `curl` pings. Your existing schedule entries need no changes:
+
+```ruby
+JobTick::WheneverSetup.install!(self)
+
 every 1.day, at: '2:00 am' do
-  jobtick_runner 'InvoiceJob.perform_later', monitor_key: 'whenever.invoice_job'
+  runner 'InvoiceJob.perform_later'
 end
 
 every :hour do
-  jobtick_rake 'reports:sync', monitor_key: 'whenever.reports_sync'
+  rake 'reports:sync'
 end
 ```
 
-The job types wrap execution with `curl` pings to the JobTick API, so no changes to individual job classes are needed.
+After adding the line, run `whenever --update-crontab` as normal and all jobs will start sending heartbeats.
+
+If jobtick is not already loaded via your Rails environment, require it first:
+
+```ruby
+require 'jobtick/whenever_setup'
+JobTick::WheneverSetup.install!(self)
+```
 
 ---
 
@@ -137,7 +146,14 @@ The job types wrap execution with `curl` pings to the JobTick API, so no changes
 
 - Ruby >= 3.3
 - Rails >= 7.0
-- One or more of: Whenever, Solid Queue, Sidekiq
+- One or more of:
+
+| Adapter | Supported versions |
+|---|---|
+| Solid Queue | >= 0.1 |
+| Sidekiq | >= 6 |
+| sidekiq-cron | >= 1.0 |
+| Whenever | >= 0.10 |
 
 ---
 
