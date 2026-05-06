@@ -67,8 +67,8 @@ RSpec.describe JobTick::Registry do
 
       described_class.sync
       expect(JobTick.monitor_map).to include(
-        "CleanupJob"  => "solid_queue.cleanup",
-        "HardWorker"  => "sidekiq.hard_worker"
+        "CleanupJob" => "solid_queue.cleanup",
+        "HardWorker" => "sidekiq.hard_worker"
       )
     end
 

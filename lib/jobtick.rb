@@ -37,9 +37,7 @@ module JobTick
       @monitor_map ||= {}
     end
 
-    def monitor_map=(map)
-      @monitor_map = map
-    end
+    attr_writer :monitor_map
 
     def monitor_key_for(class_name)
       monitor_map[class_name.to_s]

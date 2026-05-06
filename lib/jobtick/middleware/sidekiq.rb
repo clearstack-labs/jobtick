@@ -3,14 +3,14 @@
 module JobTick
   module Middleware
     class Sidekiq
-      def call(_worker, job, _queue)
+      def call(_worker, job, _queue, &)
         # Active Job wrappers are handled by the around_perform hook
         return yield if job["wrapped"]
 
         key = JobTick.monitor_key_for(job["class"])
         return yield unless key
 
-        JobTick::Monitor.run(key) { yield }
+        JobTick::Monitor.run(key, &)
       end
 
       def self.install

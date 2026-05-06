@@ -36,7 +36,8 @@ RSpec.describe JobTick::Hooks::ActiveJob do
     execute_job("CleanupJob")
 
     expect(JobTick.client).to have_received(:ping).with("solid_queue.cleanup", status: :started)
-    expect(JobTick.client).to have_received(:ping).with("solid_queue.cleanup", status: :completed, duration: a_kind_of(Float))
+    expect(JobTick.client).to have_received(:ping).with("solid_queue.cleanup", status: :completed,
+                                                                               duration: a_kind_of(Float))
   end
 
   it "yields to the job body" do

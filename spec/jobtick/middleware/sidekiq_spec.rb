@@ -24,7 +24,8 @@ RSpec.describe JobTick::Middleware::Sidekiq do
     call("class" => "HardWorker")
 
     expect(JobTick.client).to have_received(:ping).with("sidekiq.hard_worker", status: :started)
-    expect(JobTick.client).to have_received(:ping).with("sidekiq.hard_worker", status: :completed, duration: a_kind_of(Float))
+    expect(JobTick.client).to have_received(:ping).with("sidekiq.hard_worker", status: :completed,
+                                                                               duration: a_kind_of(Float))
   end
 
   it "yields to the job body" do
