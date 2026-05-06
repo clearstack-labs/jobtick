@@ -11,7 +11,8 @@ module JobTick
 
       return [] if monitors.empty?
 
-      JobTick.client.register(monitors)
+      app_name = Rails.application.class.module_parent_name if defined?(Rails)
+      JobTick.client.register(monitors, app_name: app_name)
       monitors
     end
   end

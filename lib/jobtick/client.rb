@@ -19,11 +19,13 @@ module JobTick
       post("/ping/#{monitor_key}", payload)
     end
 
-    def register(monitors)
+    def register(monitors, app_name: nil)
       return unless JobTick.config.enabled
       return if JobTick.config.api_key.nil?
 
-      post("/monitors/sync", { monitors: monitors })
+      payload = { monitors: monitors }
+      payload[:app_name] = app_name if app_name.present?
+      post("/monitors/sync", payload)
     end
 
     private
