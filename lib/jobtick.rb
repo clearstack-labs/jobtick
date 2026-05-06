@@ -9,6 +9,8 @@ require_relative "jobtick/parsers/whenever"
 require_relative "jobtick/parsers/solid_queue"
 require_relative "jobtick/parsers/sidekiq"
 require_relative "jobtick/registry"
+require_relative "jobtick/hooks/active_job"
+require_relative "jobtick/middleware/sidekiq"
 require_relative "jobtick/railtie" if defined?(Rails::Railtie)
 
 module JobTick
@@ -31,9 +33,22 @@ module JobTick
       defined?(Rails) ? Rails.logger : Logger.new($stdout)
     end
 
+    def monitor_map
+      @monitor_map ||= {}
+    end
+
+    def monitor_map=(map)
+      @monitor_map = map
+    end
+
+    def monitor_key_for(class_name)
+      monitor_map[class_name.to_s]
+    end
+
     def reset!
       @config = nil
       @client = nil
+      @monitor_map = {}
     end
   end
 end

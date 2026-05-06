@@ -61,21 +61,6 @@ No changes to individual job files. No manual monitor creation. No names to keep
 
 ## What gets monitored
 
-### Whenever (`config/schedule.rb`)
-
-```ruby
-# Your existing schedule.rb — no changes needed
-every 1.day, at: '2:00 am' do
-  runner 'InvoiceJob.perform_later'
-end
-
-every :hour do
-  runner 'SyncInventoryJob.perform_later'
-end
-```
-
-JobTick reads this file at deploy time and creates a monitor for each job automatically.
-
 ### Solid Queue (`config/recurring.yml`)
 
 ```yaml
@@ -89,12 +74,17 @@ sync_exchange_rates:
   schedule: every hour
 ```
 
-Each entry becomes a monitor. If `NightlyReportJob` doesn't run within its expected window, you get an alert.
+At boot, JobTick reads this file and registers a monitor for each entry. It then installs an `around_perform` hook into `ActiveJob::Base` so every job execution automatically sends `started`, `completed`, and `failed` pings. No changes to your job files.
 
 ### Sidekiq periodic jobs
 
+Supports both **sidekiq-cron** and **Sidekiq::Periodic**:
+
 ```ruby
-# Your existing Sidekiq config — no changes needed
+# sidekiq-cron — loaded from config/sidekiq_cron.yml or in an initializer
+Sidekiq::Cron::Job.create(name: 'Nightly Cleanup', cron: '0 2 * * *', class: 'NightlyCleanupWorker')
+
+# Sidekiq::Periodic
 Sidekiq.configure_server do |config|
   config.periodic do |mgr|
     mgr.register('0 * * * *', HourlyDigestWorker)
@@ -102,6 +92,30 @@ Sidekiq.configure_server do |config|
   end
 end
 ```
+
+JobTick installs a server middleware that wraps every job execution. For native Sidekiq workers (`Sidekiq::Worker` subclasses) pings are sent by the middleware. For Active Job workers dispatched through Sidekiq, pings are sent by the `around_perform` hook instead, so nothing is double-counted.
+
+### Whenever (`config/schedule.rb`)
+
+Whenever schedules jobs as cron shell commands, so there is no Ruby hook point to instrument automatically. One setup step is required: run the generator and update your `config/schedule.rb` to use the `jobtick_runner` and `jobtick_rake` job types instead of the built-in `runner` and `rake`:
+
+```
+bundle exec rake jobtick:whenever:setup
+```
+
+This prints the two `job_type` definitions to add to the top of your schedule file, then use them in place of the standard types:
+
+```ruby
+every 1.day, at: '2:00 am' do
+  jobtick_runner 'InvoiceJob.perform_later', monitor_key: 'whenever.invoice_job'
+end
+
+every :hour do
+  jobtick_rake 'reports:sync', monitor_key: 'whenever.reports_sync'
+end
+```
+
+The job types wrap execution with `curl` pings to the JobTick API, so no changes to individual job classes are needed.
 
 ---
 
@@ -121,7 +135,7 @@ end
 
 ## Requirements
 
-- Ruby >= 3.2
+- Ruby >= 3.3
 - Rails >= 7.0
 - One or more of: Whenever, Solid Queue, Sidekiq
 

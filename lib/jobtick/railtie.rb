@@ -7,6 +7,9 @@ module JobTick
         next unless JobTick.config.enabled
 
         JobTick::Registry.sync
+
+        ::ActiveJob::Base.include(JobTick::Hooks::ActiveJob) if defined?(::ActiveJob::Base)
+        JobTick::Middleware::Sidekiq.install if defined?(::Sidekiq)
       end
     end
 

@@ -55,5 +55,29 @@ RSpec.describe JobTick::Registry do
       monitors = described_class.sync
       expect(monitors).to contain_exactly(wh_monitor, sq_monitor)
     end
+
+    it "populates JobTick.monitor_map with a task-to-key lookup" do
+      described_class.sync
+      expect(JobTick.monitor_map).to eq("CleanupJob" => "solid_queue.cleanup")
+    end
+
+    it "includes entries from all parsers in the monitor map" do
+      sidekiq_monitor = { key: "sidekiq.hard_worker", schedule: "0 * * * *", source: "sidekiq", task: "HardWorker" }
+      allow(JobTick::Parsers::Sidekiq).to receive(:parse).and_return([sidekiq_monitor])
+
+      described_class.sync
+      expect(JobTick.monitor_map).to include(
+        "CleanupJob"  => "solid_queue.cleanup",
+        "HardWorker"  => "sidekiq.hard_worker"
+      )
+    end
+
+    it "clears the monitor map when nothing is discovered" do
+      JobTick.monitor_map = { "OldJob" => "old.key" }
+      allow(JobTick::Parsers::SolidQueue).to receive(:parse).and_return([])
+
+      described_class.sync
+      expect(JobTick.monitor_map).to be_empty
+    end
   end
 end
