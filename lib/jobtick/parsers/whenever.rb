@@ -26,9 +26,7 @@ module JobTick
       end
 
       def self.job_key(job)
-        task = job[:task].to_s.strip
-        slug = task.downcase.gsub(/[^a-z0-9]+/, "_").gsub(/\A_+|_+\z/, "")
-        "whenever.#{slug}"
+        "whenever.#{Parsers.slugify(job[:task].to_s.strip)}"
       end
       private_class_method :job_key
     end

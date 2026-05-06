@@ -40,7 +40,7 @@ module JobTick
     attr_writer :monitor_map
 
     def monitor_key_for(class_name)
-      monitor_map[class_name.to_s]
+      monitor_map[class_name]
     end
 
     def reset!
