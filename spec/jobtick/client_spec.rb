@@ -113,6 +113,26 @@ RSpec.describe JobTick::Client do
       expect(stub).to have_been_requested
     end
 
+    it "includes prune: true in the payload when prune is true" do
+      stub = stub_request(:post, "https://api.jobtick.app/v1/monitors/sync")
+             .with(body: { monitors: monitors, prune: true }.to_json)
+             .to_return(status: 200)
+
+      client.register(monitors, prune: true)
+
+      expect(stub).to have_been_requested
+    end
+
+    it "omits prune from the payload when prune is false" do
+      stub = stub_request(:post, "https://api.jobtick.app/v1/monitors/sync")
+             .with(body: { monitors: monitors }.to_json)
+             .to_return(status: 200)
+
+      client.register(monitors, prune: false)
+
+      expect(stub).to have_been_requested
+    end
+
     it "does nothing when disabled" do
       JobTick.config.enabled = false
       client.register(monitors)

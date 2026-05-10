@@ -46,6 +46,10 @@ RSpec.describe JobTick::Configuration do
     it "has no api_key by default" do
       expect(config.api_key).to be_nil
     end
+
+    it "has prune disabled by default" do
+      expect(config.prune).to be(false)
+    end
   end
 
   describe "customisation" do

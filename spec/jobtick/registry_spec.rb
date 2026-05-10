@@ -41,6 +41,15 @@ RSpec.describe JobTick::Registry do
       expect(JobTick.client).to have_received(:register).with([sq_monitor], app_name: "MyApp")
     end
 
+    it "passes prune: true when configured" do
+      JobTick.config.prune = true
+      rails_app = double("app", class: double("class", module_parent_name: "MyApp"))
+      stub_const("Rails", double("Rails", application: rails_app))
+
+      described_class.sync
+      expect(JobTick.client).to have_received(:register).with([sq_monitor], app_name: "MyApp", prune: true)
+    end
+
     it "returns an empty array and skips register when nothing is discovered" do
       allow(JobTick::Parsers::SolidQueue).to receive(:parse).and_return([])
       result = described_class.sync

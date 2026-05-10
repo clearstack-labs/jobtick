@@ -16,7 +16,9 @@ module JobTick
       return [] if monitors.empty?
 
       app_name = Rails.application.class.module_parent_name if defined?(Rails)
-      JobTick.client.register(monitors, app_name: app_name)
+      options  = { app_name: app_name }
+      options[:prune] = true if JobTick.config.prune
+      JobTick.client.register(monitors, **options)
       monitors
     end
   end
