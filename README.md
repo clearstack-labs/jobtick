@@ -57,6 +57,19 @@ That's it. On next deploy, JobTick reads your schedule config, registers a monit
 
 No changes to individual job files. No manual monitor creation. No names to keep in sync.
 
+### Removing stale monitors automatically
+
+By default, monitors are only added — nothing is removed when you delete a job from your schedule. To have each deploy also clean up monitors that are no longer in your config, enable pruning:
+
+```ruby
+JobTick.configure do |config|
+  config.api_key = ENV['JOBTICK_API_KEY']
+  config.prune   = true   # remove monitors absent from the latest sync
+end
+```
+
+With `prune` enabled, a deploy acts as the single source of truth: any monitor whose key is not present in the current payload is permanently deleted. You can also remove individual monitors manually from the JobTick dashboard at any time.
+
 ---
 
 ## What gets monitored
@@ -132,7 +145,7 @@ JobTick::WheneverSetup.install!(self)
 
 **Silent failure detection** — alerts when a job stops running entirely, not just when it raises an exception. The failure mode your error monitor misses.
 
-**Auto-sync on deploy** — add a job to your schedule, it appears in your dashboard at next deploy. Remove a job, its monitor is automatically retired.
+**Auto-sync on deploy** — add a job to your schedule, it appears in your dashboard at next deploy. Enable `config.prune = true` to automatically retire monitors when jobs are removed from your schedule.
 
 **Run history** — see every execution: start time, duration, exit status. Spot when a job starts getting slower before it becomes a problem.
 
