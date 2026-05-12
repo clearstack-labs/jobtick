@@ -1,3 +1,8 @@
+## [0.1.4] - 2026-05-05
+
+- Add `prune` configuration option — when enabled, monitors absent from the latest sync payload are permanently deleted, keeping the dashboard in sync with your schedule config
+- Remove stale `.gem` build artifact from repository
+
 ## [0.1.3] - 2026-05-05
 
 - Add `JobTick::WheneverSetup.install!(self)` — one-line setup that overrides Whenever's built-in `runner`, `rake`, and `command` job types to send heartbeat pings automatically, with no per-job changes required

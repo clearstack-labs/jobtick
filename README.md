@@ -1,5 +1,6 @@
 # JobTick
 
+[![Gem Version](https://badge.fury.io/rb/jobtick.svg)](https://rubygems.org/gems/jobtick)
 [![Ruby](https://github.com/clearstack-labs/jobtick/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/clearstack-labs/jobtick/actions/workflows/main.yml)
 
 **Rails job monitoring for Whenever, Solid Queue, and Sidekiq.**
@@ -169,14 +170,6 @@ JobTick::WheneverSetup.install!(self)
 | Whenever | >= 0.10 |
 
 ---
-
-## Status
-
-> **JobTick is currently in development.**
-> Sign up for early access at [jobtick.app](https://jobtick.app).
-> Launching June 2026.
-
-If you want to follow along or give early feedback, open an issue or watch the repo.
 
 ---
 
