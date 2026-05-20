@@ -58,6 +58,38 @@ That's it. On next deploy, JobTick reads your schedule config, registers a monit
 
 No changes to individual job files. No manual monitor creation. No names to keep in sync.
 
+### Environments
+
+**JobTick is only active in production by default.** In `development`, `staging`, or any other environment it silently does nothing — no pings are sent, no monitors are registered, no errors are raised. This means you can deploy the gem and configure it without worrying about local runs polluting your monitors or counting toward your plan.
+
+If you want to enable JobTick in a non-production environment (e.g. to test your setup on staging before going live), opt in explicitly:
+
+```ruby
+# config/initializers/jobtick.rb
+
+# Enable on staging only
+JobTick.configure do |config|
+  config.api_key  = ENV['JOBTICK_API_KEY']
+  config.enabled  = Rails.env.production? || Rails.env.staging?
+end
+```
+
+```ruby
+# Enable everywhere — useful for a quick local smoke-test
+JobTick.configure do |config|
+  config.api_key  = ENV['JOBTICK_API_KEY']
+  config.enabled  = true
+end
+```
+
+```ruby
+# Drive it from an env var so you can toggle without a deploy
+JobTick.configure do |config|
+  config.api_key  = ENV['JOBTICK_API_KEY']
+  config.enabled  = ENV['JOBTICK_ENABLED'] == 'true'
+end
+```
+
 ### Removing stale monitors automatically
 
 By default, monitors are only added — nothing is removed when you delete a job from your schedule. To have each deploy also clean up monitors that are no longer in your config, enable pruning:
