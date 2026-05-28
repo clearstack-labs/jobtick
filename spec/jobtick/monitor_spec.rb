@@ -46,7 +46,7 @@ RSpec.describe JobTick::Monitor do
     end
 
     it "records a positive duration" do
-      allow(Time).to receive(:now).and_return(Time.at(0), Time.at(1.5))
+      allow(Process).to receive(:clock_gettime).with(Process::CLOCK_MONOTONIC).and_return(0.0, 1.5)
 
       described_class.run("my.job") { :ok }
 

@@ -5,15 +5,11 @@ require_relative "jobtick/version"
 require_relative "jobtick/configuration"
 require_relative "jobtick/client"
 require_relative "jobtick/monitor"
-require_relative "jobtick/parsers/whenever"
-require_relative "jobtick/parsers/solid_queue"
-require_relative "jobtick/parsers/sidekiq"
-require_relative "jobtick/registry"
-require_relative "jobtick/hooks/active_job"
-require_relative "jobtick/middleware/sidekiq"
 require_relative "jobtick/railtie" if defined?(Rails::Railtie)
 
 module JobTick
+  EMPTY_MAP = {}.freeze
+
   class Error < StandardError; end
 
   class << self
@@ -34,7 +30,7 @@ module JobTick
     end
 
     def monitor_map
-      @monitor_map ||= {}
+      @monitor_map ||= EMPTY_MAP
     end
 
     attr_writer :monitor_map
@@ -44,9 +40,10 @@ module JobTick
     end
 
     def reset!
+      Dispatcher.reset! if defined?(Dispatcher)
       @config = nil
       @client = nil
-      @monitor_map = {}
+      @monitor_map = EMPTY_MAP
     end
   end
 end

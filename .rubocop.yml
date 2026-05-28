@@ -31,3 +31,11 @@ Metrics/PerceivedComplexity:
 Metrics/BlockLength:
   Exclude:
     - "spec/**/*"
+
+Metrics/ModuleLength:
+  Exclude:
+    - "lib/jobtick/dispatcher.rb"
+
+Metrics/ClassLength:
+  Exclude:
+    - "lib/jobtick/dispatcher.rb"

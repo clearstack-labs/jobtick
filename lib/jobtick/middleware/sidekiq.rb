@@ -7,7 +7,7 @@ module JobTick
         # Active Job wrappers are handled by the around_perform hook
         return yield if job["wrapped"]
 
-        key = JobTick.monitor_key_for(job["class"])
+        key = JobTick.monitor_map[job["class"]]
         return yield unless key
 
         JobTick::Monitor.run(key, &)
