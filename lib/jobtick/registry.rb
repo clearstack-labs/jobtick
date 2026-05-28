@@ -9,9 +9,9 @@ module JobTick
         Parsers::Sidekiq.parse
       ].flatten.compact
 
-      JobTick.monitor_map = monitors.each_with_object({}) do |m, map|
-        map[m[:task]] = m[:key] if m[:task]
-      end
+      map = {}
+      monitors.each { |m| map[m[:task]] = m[:key] if m[:task] }
+      JobTick.monitor_map = map.freeze
 
       return [] if monitors.empty?
 

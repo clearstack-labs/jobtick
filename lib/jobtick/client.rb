@@ -1,53 +1,32 @@
 # frozen_string_literal: true
 
-require "net/http"
-require "json"
-require "uri"
+require_relative "dispatcher"
 
 module JobTick
   class Client
-    TIMEOUT = 5
+    PING_PREFIX = "/ping/"
+    SYNC_PATH   = "/monitors/sync"
 
     def ping(monitor_key, status:, duration: nil, message: nil)
-      return unless JobTick.config.enabled
-      return if JobTick.config.api_key.nil?
+      config = JobTick.config
+      return unless config.enabled && !config.api_key.nil?
 
       payload = { status: status }
       payload[:duration] = duration.round(3) if duration
       payload[:message]  = message           if message
 
-      post("/ping/#{monitor_key}", payload)
+      Dispatcher.enqueue("#{PING_PREFIX}#{monitor_key}", payload)
     end
 
     def register(monitors, app_name: nil, prune: false)
-      return unless JobTick.config.enabled
-      return if JobTick.config.api_key.nil?
+      config = JobTick.config
+      return unless config.enabled && !config.api_key.nil?
 
       payload = { monitors: monitors }
       payload[:app_name] = app_name if app_name && !app_name.empty?
       payload[:prune]    = true if prune
-      post("/monitors/sync", payload)
-    end
 
-    private
-
-    def post(path, body)
-      uri  = URI("#{JobTick.config.endpoint}#{path}")
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl      = uri.scheme == "https"
-      http.open_timeout = TIMEOUT
-      http.read_timeout = TIMEOUT
-
-      request = Net::HTTP::Post.new(uri)
-      request["Content-Type"]  = "application/json"
-      request["Authorization"] = "Bearer #{JobTick.config.api_key}"
-      request["User-Agent"]    = "jobtick-ruby/#{JobTick::VERSION}"
-      request.body             = body.to_json
-
-      http.request(request)
-    rescue StandardError => e
-      JobTick.logger.warn("[JobTick] HTTP request failed (#{path}): #{e.message}")
-      nil
+      Dispatcher.send_sync(SYNC_PATH, payload)
     end
   end
 end

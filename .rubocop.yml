@@ -1,7 +1,13 @@
+inherit_mode:
+  merge:
+    - Exclude
+
 AllCops:
   TargetRubyVersion: 3.3
   NewCops: enable
   SuggestExtensions: false
+  Exclude:
+    - "spec/benchmarks/**/*"
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes
@@ -31,3 +37,11 @@ Metrics/PerceivedComplexity:
 Metrics/BlockLength:
   Exclude:
     - "spec/**/*"
+
+Metrics/ModuleLength:
+  Exclude:
+    - "lib/jobtick/dispatcher.rb"
+
+Metrics/ClassLength:
+  Exclude:
+    - "lib/jobtick/dispatcher.rb"

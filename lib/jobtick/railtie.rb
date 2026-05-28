@@ -6,6 +6,13 @@ module JobTick
       ActiveSupport.on_load(:after_initialize) do
         next unless JobTick.config.enabled
 
+        require_relative "parsers/whenever"
+        require_relative "parsers/solid_queue"
+        require_relative "parsers/sidekiq"
+        require_relative "registry"
+        require_relative "hooks/active_job"
+        require_relative "middleware/sidekiq"
+
         JobTick::Registry.sync
 
         ::ActiveJob::Base.include(JobTick::Hooks::ActiveJob) if defined?(::ActiveJob::Base)

@@ -2,8 +2,11 @@
 
 module JobTick
   module Parsers
+    SLUG_RE = /[^a-z0-9]+/
+    SLUG_TRIM_RE = /\A_+|_+\z/
+
     def self.slugify(str)
-      str.downcase.gsub(/[^a-z0-9]+/, "_").gsub(/\A_+|_+\z/, "")
+      str.downcase.gsub(SLUG_RE, "_").gsub(SLUG_TRIM_RE, "")
     end
 
     class Sidekiq

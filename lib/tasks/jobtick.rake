@@ -3,6 +3,11 @@
 namespace :jobtick do
   desc "Sync discovered jobs with jobtick.app"
   task sync: :environment do
+    require "jobtick/parsers/whenever"
+    require "jobtick/parsers/solid_queue"
+    require "jobtick/parsers/sidekiq"
+    require "jobtick/registry"
+
     monitors = JobTick::Registry.sync
     count    = monitors&.length || 0
     puts "[JobTick] Synced #{count} monitor(s)"

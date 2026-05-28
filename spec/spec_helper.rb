@@ -3,6 +3,14 @@
 require "webmock/rspec"
 require "jobtick"
 
+# Eagerly load lazily-required files so all specs can reference the constants.
+require "jobtick/parsers/whenever"
+require "jobtick/parsers/solid_queue"
+require "jobtick/parsers/sidekiq"
+require "jobtick/registry"
+require "jobtick/hooks/active_job"
+require "jobtick/middleware/sidekiq"
+
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
@@ -19,6 +27,7 @@ RSpec.configure do |config|
   config.before do
     JobTick.reset!
     WebMock.reset!
+    JobTick::Dispatcher.synchronous = true
   end
 end
 

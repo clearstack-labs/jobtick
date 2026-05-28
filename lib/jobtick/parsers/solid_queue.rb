@@ -16,16 +16,16 @@ module JobTick
         tasks = yaml[env] || yaml["default"] || yaml
         return [] unless tasks.is_a?(Hash)
 
-        tasks.map do |key, config|
+        tasks.each_with_object([]) do |(key, config), out|
           next unless config.is_a?(Hash)
 
-          {
+          out << {
             key: "solid_queue.#{key}",
             schedule: config["schedule"],
             source: "solid_queue",
             task: config["class"]
           }
-        end.compact
+        end
       rescue StandardError => e
         JobTick.logger.warn("[JobTick] Solid Queue parser failed: #{e.message}")
         []

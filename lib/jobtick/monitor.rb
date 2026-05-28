@@ -2,14 +2,18 @@
 
 module JobTick
   class Monitor
-    def self.run(key)
-      return yield unless JobTick.config.enabled
+    MONOTONIC = Process::CLOCK_MONOTONIC
 
-      started_at = Time.now
-      JobTick.client.ping(key, status: :started)
-      result   = yield
-      duration = Time.now - started_at
-      JobTick.client.ping(key, status: :completed, duration: duration)
+    def self.run(key)
+      config = JobTick.config
+      return yield unless config.enabled && !config.api_key.nil?
+
+      client = JobTick.client
+      client.ping(key, status: :started)
+      started = Process.clock_gettime(MONOTONIC)
+      result  = yield
+      duration = Process.clock_gettime(MONOTONIC) - started
+      client.ping(key, status: :completed, duration: duration)
       result
     rescue StandardError => e
       JobTick.client.ping(key, status: :failed, message: e.message)
