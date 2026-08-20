@@ -68,6 +68,39 @@ RSpec.describe JobTick::Parsers::SolidQueue do
         expect(result.length).to eq(1)
         expect(result.first[:task]).to eq("StagingJob")
       end
+
+      it "returns an empty array, not the environment names themselves, when the " \
+         "current environment has no entry" do
+        JobTick.configure { |c| c.environment = "test" }
+        logger = instance_double(Logger, warn: nil)
+        allow(JobTick).to receive(:logger).and_return(logger)
+
+        result = described_class.parse
+
+        expect(result).to eq([])
+        expect(logger).to have_received(:warn).with(/no entry for "test"/)
+      end
+    end
+
+    context "with a recurring.yml mixing class: and command: tasks" do
+      let(:command_only_path) { File.expand_path("../../fixtures/recurring_command_only.yml", __dir__) }
+
+      before { stub_const("JobTick::Parsers::SolidQueue::RECURRING_FILE", command_only_path) }
+
+      it "registers only the class-based task" do
+        result = described_class.parse
+        expect(result.length).to eq(1)
+        expect(result.first[:task]).to eq("CleanupJob")
+      end
+
+      it "logs a warning naming the skipped command-based task" do
+        logger = instance_double(Logger, warn: nil)
+        allow(JobTick).to receive(:logger).and_return(logger)
+
+        described_class.parse
+
+        expect(logger).to have_received(:warn).with(/shell_backup/)
+      end
     end
 
     context "with a malformed YAML file" do

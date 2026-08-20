@@ -1,73 +1,98 @@
 # frozen_string_literal: true
 
 require "spec_helper"
+require "whenever"
 
+# These specs build a real Whenever::JobList and read its real
+# generate_cron_output — deliberately not a hand-rolled stub of
+# Whenever::JobList's API. Whenever::JobList has no public `jobs` reader
+# (only attr_reader :roles) and its internal @jobs is a private, nested
+# structure with no [] accessor on Job either — a prior version of this spec
+# stubbed a `jobs` API that Whenever doesn't actually expose, and the
+# resulting Parsers::Whenever raised NoMethodError against every real app,
+# silently swallowed into []. Testing against the real gem is what catches
+# that class of failure.
 RSpec.describe JobTick::Parsers::Whenever do
   let(:fixture_path) { File.expand_path("../../fixtures/schedule.rb", __dir__) }
+  let(:not_installed_path) { File.expand_path("../../fixtures/schedule_not_installed.rb", __dir__) }
 
-  # Build a Whenever::JobList stub whose .new returns a list with specified jobs.
-  # Uses a real method definition to sidestep verify_partial_doubles.
-  def stub_whenever(jobs_by_period)
-    list_instance = double("Whenever::JobList", jobs: jobs_by_period)
-    stub_class = Class.new do
-      define_singleton_method(:new) { |**_| list_instance }
+  before do
+    JobTick.configure do |c|
+      c.api_key  = "test-key"
+      c.endpoint = "https://api.jobtick.app/v1"
     end
-    stub_const("Whenever", Module.new)
-    stub_const("Whenever::JobList", stub_class)
-    stub_const("JobTick::Parsers::Whenever::SCHEDULE_FILE", fixture_path)
   end
 
   describe ".parse" do
-    context "when Whenever is not defined" do
+    context "when the whenever gem is not available" do
       it "returns an empty array" do
-        hide_const("Whenever") if defined?(Whenever)
+        allow(described_class).to receive(:whenever_available?).and_return(false)
         expect(described_class.parse).to eq([])
       end
     end
 
     context "when the schedule file does not exist" do
       it "returns an empty array" do
-        stub_const("Whenever", Module.new)
         stub_const("JobTick::Parsers::Whenever::SCHEDULE_FILE", "nonexistent.rb")
         expect(described_class.parse).to eq([])
       end
     end
 
-    context "when Whenever is available" do
-      it "returns a job descriptor for each discovered job" do
-        stub_whenever(
-          "1.hour" => [{ task: "InvoiceJob.perform_later" }],
-          "1.day" => [{ task: "rake reports:daily" }]
-        )
+    context "when config/schedule.rb has JobTick::WheneverSetup.install!(self)" do
+      before { stub_const("JobTick::Parsers::Whenever::SCHEDULE_FILE", fixture_path) }
+
+      it "returns one monitor descriptor per scheduled job" do
         result = described_class.parse
-        expect(result.length).to eq(2)
+        expect(result.length).to eq(3)
         expect(result.map { |j| j[:source] }.uniq).to eq(["whenever"])
       end
 
-      it "generates a key from the task name" do
-        stub_whenever("1.hour" => [{ task: "InvoiceJob.perform_later" }])
+      it "recovers the exact key WheneverSetup injected into the job" do
         result = described_class.parse
-        expect(result.first[:key]).to eq("whenever.invoicejob_perform_later")
+        expect(result.map { |j| j[:key] }).to contain_exactly(
+          "whenever.invoicejob_perform_later",
+          "whenever.reports_daily",
+          "whenever.weeklydigestjob_perform_later"
+        )
       end
 
-      it "captures the schedule period" do
-        stub_whenever("1.hour" => [{ task: "SomeJob.run" }])
+      it "captures the real cron expression, not the DSL frequency string" do
         result = described_class.parse
-        expect(result.first[:schedule]).to eq("1.hour")
+        by_key = result.to_h { |m| [m[:key], m[:schedule]] }
+
+        expect(by_key["whenever.invoicejob_perform_later"]).to eq("0 * * * *")
+        expect(by_key["whenever.reports_daily"]).to eq("0 0 * * *")
+        expect(by_key["whenever.weeklydigestjob_perform_later"]).to eq("0 9 * * 1")
       end
 
-      it "captures the task string" do
-        stub_whenever("1.hour" => [{ task: "bundle exec rake reports:daily" }])
+      it "leaves task nil — Whenever jobs are pinged by curl, never by a Ruby hook" do
         result = described_class.parse
-        expect(result.first[:task]).to eq("bundle exec rake reports:daily")
+        expect(result.map { |j| j[:task] }.uniq).to eq([nil])
+      end
+    end
+
+    context "when config/schedule.rb exists but WheneverSetup was never installed" do
+      before { stub_const("JobTick::Parsers::Whenever::SCHEDULE_FILE", not_installed_path) }
+
+      it "returns an empty array" do
+        expect(described_class.parse).to eq([])
       end
 
-      it "returns an empty array and does not raise when the parser fails" do
-        stub_whenever("1.hour" => [{ task: "SomeJob.run" }])
-        list_double = double("Whenever::JobList")
-        allow(list_double).to receive(:jobs).and_raise(StandardError, "parse error")
-        stub_class = Class.new { define_singleton_method(:new) { |**_| list_double } }
-        stub_const("Whenever::JobList", stub_class)
+      it "logs an actionable warning instead of failing silently" do
+        logger = instance_double(Logger, warn: nil)
+        allow(JobTick).to receive(:logger).and_return(logger)
+
+        described_class.parse
+
+        expect(logger).to have_received(:warn).with(/WheneverSetup\.install!/)
+      end
+    end
+
+    context "when building the job list raises" do
+      before { stub_const("JobTick::Parsers::Whenever::SCHEDULE_FILE", fixture_path) }
+
+      it "returns an empty array and does not raise" do
+        allow(Whenever::JobList).to receive(:new).and_raise(StandardError, "parse error")
 
         expect { described_class.parse }.not_to raise_error
         expect(described_class.parse).to eq([])

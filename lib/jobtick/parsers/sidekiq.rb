@@ -1,14 +1,9 @@
 # frozen_string_literal: true
 
+require_relative "../parsers"
+
 module JobTick
   module Parsers
-    SLUG_RE = /[^a-z0-9]+/
-    SLUG_TRIM_RE = /\A_+|_+\z/
-
-    def self.slugify(str)
-      str.downcase.gsub(SLUG_RE, "_").gsub(SLUG_TRIM_RE, "")
-    end
-
     class Sidekiq
       def self.parse
         return [] unless defined?(::Sidekiq)

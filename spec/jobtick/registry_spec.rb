@@ -30,7 +30,7 @@ RSpec.describe JobTick::Registry do
 
     it "calls client.register with the discovered monitors" do
       described_class.sync
-      expect(JobTick.client).to have_received(:register).with([sq_monitor], app_name: nil)
+      expect(JobTick.client).to have_received(:register).with([sq_monitor], app_name: nil, sync: true)
     end
 
     it "passes the Rails app name when Rails is defined" do
@@ -38,7 +38,7 @@ RSpec.describe JobTick::Registry do
       stub_const("Rails", double("Rails", application: rails_app))
 
       described_class.sync
-      expect(JobTick.client).to have_received(:register).with([sq_monitor], app_name: "MyApp")
+      expect(JobTick.client).to have_received(:register).with([sq_monitor], app_name: "MyApp", sync: true)
     end
 
     it "passes prune: true when configured" do
@@ -47,7 +47,17 @@ RSpec.describe JobTick::Registry do
       stub_const("Rails", double("Rails", application: rails_app))
 
       described_class.sync
-      expect(JobTick.client).to have_received(:register).with([sq_monitor], app_name: "MyApp", prune: true)
+      expect(JobTick.client).to have_received(:register).with([sq_monitor], app_name: "MyApp", prune: true, sync: true)
+    end
+
+    it "defaults to a blocking (sync: true) register call" do
+      described_class.sync
+      expect(JobTick.client).to have_received(:register).with(anything, hash_including(sync: true))
+    end
+
+    it "passes sync: false through when called with sync: false" do
+      described_class.sync(sync: false)
+      expect(JobTick.client).to have_received(:register).with(anything, hash_including(sync: false))
     end
 
     it "returns an empty array and skips register when nothing is discovered" do
@@ -87,6 +97,19 @@ RSpec.describe JobTick::Registry do
 
       described_class.sync
       expect(JobTick.monitor_map).to be_empty
+    end
+
+    it "keeps the first monitor and warns when two monitors target the same task" do
+      duplicate = { key: "solid_queue.cleanup_again", schedule: "every hour", source: "solid_queue",
+                    task: "CleanupJob" }
+      allow(JobTick::Parsers::SolidQueue).to receive(:parse).and_return([sq_monitor, duplicate])
+      logger = instance_double(Logger, warn: nil)
+      allow(JobTick).to receive(:logger).and_return(logger)
+
+      described_class.sync
+
+      expect(JobTick.monitor_map).to eq("CleanupJob" => "solid_queue.cleanup")
+      expect(logger).to have_received(:warn).with(/solid_queue\.cleanup_again/)
     end
   end
 end

@@ -103,6 +103,20 @@ end
 
 With `prune` enabled, a deploy acts as the single source of truth: any monitor whose key is not present in the current payload is permanently deleted. You can also remove individual monitors manually from the JobTick dashboard at any time.
 
+### Deploying
+
+JobTick syncs your monitors automatically the first time a web or worker process boots after a deploy — this sync runs in the background and never blocks startup, even if the JobTick API is slow or unreachable.
+
+To skip the wait until that first boot (or to sync from CI as an explicit deploy step), run it directly:
+
+```
+bundle exec rake jobtick:sync
+```
+
+This is the one case where the sync blocks — it prints the number of monitors registered, so its output is only trustworthy if it actually waited for the API to respond.
+
+Boot-time sync is automatically skipped for `rails console`, `rails runner`, and any rake task — none of them should pay for a sync just to boot, and `rails runner` matters especially, since Whenever's cron wrapper shells out through it on every tick. Set `config.sync_on_boot = false` to disable the automatic sync everywhere and rely solely on `rake jobtick:sync`.
+
 ---
 
 ## What gets monitored
@@ -121,6 +135,8 @@ sync_exchange_rates:
 ```
 
 At boot, JobTick reads this file and registers a monitor for each entry. It then installs an `around_perform` hook into `ActiveJob::Base` so every job execution automatically sends `started`, `completed`, and `failed` pings. No changes to your job files.
+
+Entries scheduled with `command:` instead of `class:` run a raw shell command rather than a Ruby job class, so there's no hook point for JobTick to instrument automatically — these are skipped (with a log line naming them) rather than registered as a monitor JobTick can never ping.
 
 ### Sidekiq periodic jobs
 
@@ -143,15 +159,19 @@ JobTick installs a server middleware that wraps every job execution. For native 
 
 ### Whenever (`config/schedule.rb`)
 
-Whenever schedules jobs as cron shell commands, so there is no Ruby hook point to instrument automatically. Add one line to `config/schedule.rb`:
+Whenever schedules jobs as cron shell commands, so there is no Ruby hook point to instrument automatically. Add two lines to the top of `config/schedule.rb`:
 
 ```ruby
+require 'jobtick/whenever_setup'
 JobTick::WheneverSetup.install!(self)
 ```
 
-This overrides the built-in `runner`, `rake`, and `command` job types to wrap every execution with `curl` pings. Your existing schedule entries need no changes:
+`jobtick/whenever_setup` is a separate file from the main gem on purpose — `config/schedule.rb` is evaluated standalone (by `whenever --update-crontab`, and again by JobTick itself at boot to discover your jobs), not as part of a normal Rails boot, so it needs its own explicit require regardless of whether `gem 'jobtick'` is already in your Gemfile.
+
+This overrides the built-in `runner`, `rake`, and `command` job types to wrap every execution with `curl` pings, gated by a real `if`/`then`/`else` so a network blip on the ping itself can never be mistaken for the job failing. Your existing schedule entries need no other changes:
 
 ```ruby
+require 'jobtick/whenever_setup'
 JobTick::WheneverSetup.install!(self)
 
 every 1.day, at: '2:00 am' do
@@ -163,14 +183,7 @@ every :hour do
 end
 ```
 
-After adding the line, run `whenever --update-crontab` as normal and all jobs will start sending heartbeats.
-
-If jobtick is not already loaded via your Rails environment, require it first:
-
-```ruby
-require 'jobtick/whenever_setup'
-JobTick::WheneverSetup.install!(self)
-```
+After adding these lines, run `whenever --update-crontab` as normal and all jobs will start sending heartbeats. JobTick discovers Whenever monitors by reading the same file back with the real `whenever` gem, so `whenever` must be a dependency of your app (it usually already is) — add it with `require: false` is fine, JobTick loads it itself when needed.
 
 ---
 

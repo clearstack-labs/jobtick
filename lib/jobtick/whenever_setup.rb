@@ -11,27 +11,48 @@ module JobTick
   #
   # This replaces the :runner, :rake, and :command job types so that every
   # scheduled job automatically sends started/completed/failed heartbeats without
-  # any per-job configuration.
+  # any per-job configuration. The monitor key is injected as a literal job
+  # option (:jobtick_key) rather than recomputed in shell, so it always matches
+  # the key Parsers::Whenever reads back out of the generated crontab.
   module WheneverSetup
+    TEMPLATES = {
+      runner: "cd :path && bundle exec rails runner ':task' :output",
+      rake: "cd :path && bundle exec rake :task :output",
+      command: ":task :output"
+    }.freeze
+
+    KEY_INJECTOR = Module.new do
+      TEMPLATES.each_key do |type|
+        define_method(type) do |task, *args|
+          opts = args[0].is_a?(Hash) ? args[0].dup : {}
+          opts[:jobtick_key] = JobTick::Parsers.whenever_key(task)
+          super(task, opts)
+        end
+      end
+    end
+    private_constant :KEY_INJECTOR
+
     def self.install!(schedule)
       endpoint = JobTick.config.endpoint
 
-      schedule.job_type :runner,  wrap(endpoint, "cd :path && bundle exec rails runner ':task' :output")
-      schedule.job_type :rake,    wrap(endpoint, "cd :path && bundle exec rake :task :output")
-      schedule.job_type :command, wrap(endpoint, "cd :path && :task :output")
+      TEMPLATES.each { |type, inner| schedule.job_type(type, wrap(endpoint, inner)) }
+
+      # Prepended after job_type defines the singleton methods above, but order
+      # doesn't matter for resolution: a prepended module always sits ahead of
+      # the singleton class in the ancestor chain, so this always wins and
+      # `super` always reaches the method job_type just defined.
+      schedule.singleton_class.prepend(KEY_INJECTOR)
     end
 
     def self.wrap(endpoint, inner_cmd)
-      # Shell equivalent of Parsers.slugify: downcase, collapse non-alnum runs to _, strip leading/trailing _.
-      sed = "sed 's/[^a-z0-9][^a-z0-9]*/_/g' | sed 's/^_*//;s/_*$//'"
-      slug = "$(printf '%s' ':task' | tr '[:upper:]' '[:lower:]' | #{sed})"
-      key_assign = %(JOBTICK_KEY="whenever.#{slug}")
+      key_assign = "JOBTICK_KEY=:jobtick_key"
+      started   = %(curl -sf --max-time 10 "#{endpoint}/ping/$JOBTICK_KEY/started")
+      completed = %(curl -sf --max-time 10 "#{endpoint}/ping/$JOBTICK_KEY/completed")
+      failed    = %(curl -sf --max-time 10 "#{endpoint}/ping/$JOBTICK_KEY/failed")
 
-      "#{key_assign} ; " \
-        "curl -sf \"#{endpoint}/ping/$JOBTICK_KEY/started\" ; " \
-        "#{inner_cmd} && " \
-        "curl -sf \"#{endpoint}/ping/$JOBTICK_KEY/completed\" || " \
-        "curl -sf \"#{endpoint}/ping/$JOBTICK_KEY/failed\""
+      "#{key_assign} ; #{started} ; " \
+        "if #{inner_cmd} ; then rc=0 ; #{completed} ; " \
+        "else rc=$? ; #{failed} ; fi ; exit $rc"
     end
     private_class_method :wrap
   end

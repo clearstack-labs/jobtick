@@ -6,10 +6,10 @@ module JobTick
 
     def self.run(key)
       config = JobTick.config
-      return yield unless config.enabled && !config.api_key.nil?
+      return yield unless config.enabled?
 
       client = JobTick.client
-      client.ping(key, status: :started)
+      client.ping(key, status: :started) if config.ping_started
       started = Process.clock_gettime(MONOTONIC)
       result  = yield
       duration = Process.clock_gettime(MONOTONIC) - started

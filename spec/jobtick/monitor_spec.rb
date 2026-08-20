@@ -45,6 +45,14 @@ RSpec.describe JobTick::Monitor do
       expect(result).to eq(99)
     end
 
+    it "skips the started ping when ping_started is disabled" do
+      JobTick.config.ping_started = false
+      described_class.run("my.job") { :ok }
+
+      expect(JobTick.client).not_to have_received(:ping).with("my.job", status: :started)
+      expect(JobTick.client).to have_received(:ping).with("my.job", status: :completed, duration: a_kind_of(Float))
+    end
+
     it "records a positive duration" do
       allow(Process).to receive(:clock_gettime).with(Process::CLOCK_MONOTONIC).and_return(0.0, 1.5)
 

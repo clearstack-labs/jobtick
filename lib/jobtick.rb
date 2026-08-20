@@ -5,6 +5,7 @@ require_relative "jobtick/version"
 require_relative "jobtick/configuration"
 require_relative "jobtick/client"
 require_relative "jobtick/monitor"
+require_relative "jobtick/parsers"
 require_relative "jobtick/railtie" if defined?(Rails::Railtie)
 
 module JobTick
@@ -25,8 +26,20 @@ module JobTick
       @client ||= Client.new
     end
 
+    # The app's root directory, used to resolve schedule/recurring config
+    # files. Falls back to the process's working directory when Rails isn't
+    # loaded (or hasn't set a root yet) so discovery doesn't silently depend
+    # on the caller's cwd.
+    def root
+      if defined?(Rails) && Rails.respond_to?(:root) && Rails.root
+        Rails.root.to_s
+      else
+        Dir.pwd
+      end
+    end
+
     def logger
-      defined?(Rails) ? Rails.logger : Logger.new($stdout)
+      (defined?(Rails) && Rails.logger) || (@fallback_logger ||= Logger.new($stdout))
     end
 
     def monitor_map

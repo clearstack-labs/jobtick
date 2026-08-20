@@ -50,6 +50,34 @@ RSpec.describe JobTick::Configuration do
     it "has prune disabled by default" do
       expect(config.prune).to be(false)
     end
+
+    it "syncs on boot by default" do
+      expect(config.sync_on_boot).to be(true)
+    end
+
+    it "sends the started ping by default" do
+      expect(config.ping_started).to be(true)
+    end
+  end
+
+  describe "#enabled?" do
+    it "is true only when enabled and an api_key is present" do
+      config.enabled = true
+      config.api_key = "secret"
+      expect(config.enabled?).to be(true)
+    end
+
+    it "is false when enabled but no api_key is set" do
+      config.enabled = true
+      config.api_key = nil
+      expect(config.enabled?).to be(false)
+    end
+
+    it "is false when an api_key is set but not enabled" do
+      config.enabled = false
+      config.api_key = "secret"
+      expect(config.enabled?).to be(false)
+    end
   end
 
   describe "customisation" do
