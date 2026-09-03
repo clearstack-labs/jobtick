@@ -1,3 +1,7 @@
+## [Unreleased]
+
+- Send the app's `Time.zone` (when running under Rails) with every monitor sync, so the server can resolve cron schedules like `20 4 * * *` in the app's own time zone instead of guessing. Fixes false "late" alerts for apps not running in UTC. Apps outside Rails, or without `Time.zone` set, are unaffected — the server falls back to the account's dashboard-configured time zone.
+
 ## [0.3.0] - 2026-08-20
 
 - **Fix: Whenever monitors never actually registered.** `Parsers::Whenever` called a `Whenever::JobList#jobs` API that doesn't exist on the real gem (only `attr_reader :roles`), so every discovery attempt raised and was silently swallowed — no Whenever job has ever been registered by prior versions. The parser now reads the real, public `generate_cron_output` instead, and `WheneverSetup` injects the monitor key as a literal job option so the registered key and the pinged key are always the same value by construction. `config/schedule.rb` needs `require 'jobtick/whenever_setup'` before `JobTick::WheneverSetup.install!(self)` now — see the README.

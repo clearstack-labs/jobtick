@@ -143,5 +143,39 @@ RSpec.describe JobTick::Client do
       stub_request(:post, "https://api.jobtick.app/v1/monitors/sync").to_raise(SocketError)
       expect { client.register(monitors) }.not_to raise_error
     end
+
+    context "when Time.zone is available (Rails apps)" do
+      around do |example|
+        require "active_support"
+        require "active_support/time"
+        previous_zone = Time.zone
+        Time.zone = "Europe/Vilnius"
+        example.run
+      ensure
+        Time.zone = previous_zone
+      end
+
+      it "includes time_zone in the payload" do
+        stub = stub_request(:post, "https://api.jobtick.app/v1/monitors/sync")
+               .with(body: { monitors: monitors, time_zone: "Europe/Vilnius" }.to_json)
+               .to_return(status: 200)
+
+        client.register(monitors)
+
+        expect(stub).to have_been_requested
+      end
+    end
+
+    context "when Time.zone is not defined (plain Ruby apps)" do
+      it "omits time_zone from the payload" do
+        stub = stub_request(:post, "https://api.jobtick.app/v1/monitors/sync")
+               .with(body: { monitors: monitors }.to_json)
+               .to_return(status: 200)
+
+        client.register(monitors)
+
+        expect(stub).to have_been_requested
+      end
+    end
   end
 end
