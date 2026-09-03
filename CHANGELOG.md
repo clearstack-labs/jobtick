@@ -1,4 +1,4 @@
-## [Unreleased]
+## [0.3.1] - 2026-09-03
 
 - Send the app's `Time.zone` (when running under Rails) with every monitor sync, so the server can resolve cron schedules like `20 4 * * *` in the app's own time zone instead of guessing. Fixes false "late" alerts for apps not running in UTC. Apps outside Rails, or without `Time.zone` set, are unaffected — the server falls back to the account's dashboard-configured time zone.
 
